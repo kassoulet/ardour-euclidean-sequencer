@@ -152,11 +152,11 @@ local function rythm(k, n)
         r[i] = { i <= k }
     end
 
-    local function cat(i, k)
-        for _, v in ipairs(r[k]) do
+    local function cat(i, j)
+        for _, v in ipairs(r[j]) do
             r[i][#r[i] + 1] = v
         end
-        r[k] = nil
+        r[j] = nil
     end
 
     while #r > k do
@@ -194,9 +194,6 @@ function dsp_run(_, _, n_samples)
     local bbt = tm:bbt_at(pos)
     local meter = tm:meter_at(pos)
     local tempo = tm:tempo_at(pos)
-    -- duration of this step
-    local dur = tm:bbt_duration_at(pos, Temporal.BBT_Offset(0, 1, 0)):samples() / subdiv
-    local bpm = tempo:quarter_notes_per_minute();
 
     for _, ev in ipairs(midiin) do
         -- pass through all MIDI data
@@ -275,10 +272,8 @@ function dsp_run(_, _, n_samples)
     previous_params = params
 end
 
-function render_inline(ctx, w, max_h) -- inline display
+function render_inline(ctx, w, _max_h) -- inline display
     local h = w
-    local p = 0
-    local inc = 1 / w
 
     local events, length, offset = read_params()
     local sequence = rythm(events, length)
@@ -297,11 +292,10 @@ function render_inline(ctx, w, max_h) -- inline display
     local c = w * 0.05
     local cx = w / 2
     local cy = h / 2
-    local acum = offset
 
     for i = 0, length - 1 do
-        x = cx + r * math.cos(2 * math.pi * (i / length) - 0.5 * math.pi)
-        y = cy + r * math.sin(2 * math.pi * (i / length) - 0.5 * math.pi)
+        local x = cx + r * math.cos(2 * math.pi * (i / length) - 0.5 * math.pi)
+        local y = cy + r * math.sin(2 * math.pi * (i / length) - 0.5 * math.pi)
         ctx:arc(x, y, c, 0, 2 * math.pi)
         local active = sequence[(i + 1 + offset) % #sequence]
         if active then

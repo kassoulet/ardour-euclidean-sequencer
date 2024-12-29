@@ -1,3 +1,5 @@
+[![Luacheck](https://github.com/kassoulet/ardour-euclidean-sequencer/actions/workflows/main.yml/badge.svg)](https://github.com/kassoulet/ardour-euclidean-sequencer/actions/workflows/main.yml)
+
 # Euclidean Sequencer for Ardour
 
 A Simple, Monophonic, Euclidean Sequencer for Ardour8.
