@@ -112,8 +112,6 @@ function dsp_params()
     }
 end
 
-local tme = 0          -- sample-counter
-local seq = 1          -- sequence-step
 local spb = 0          -- samples per beat
 local current_step = 0 -- step counter
 local previous_params = {}
@@ -135,20 +133,20 @@ function dsp_init(rate)
 end
 
 -- retuns events, length, offset
-function read_params()
+local function read_params()
     local ctrl = CtrlPorts:array()
     return math.floor(ctrl[1]), math.floor(ctrl[2]), math.floor(ctrl[3])
 end
 
 -- returns note, octave, volume, duration
-function read_noteinfo()
+local function read_noteinfo()
     local ctrl = CtrlPorts:array()
     return math.floor(ctrl[5]), math.floor(ctrl[6]), math.floor(ctrl[7]), ctrl[4]
 end
 
 -- Euclidean rythm (http://en.wikipedia.org/wiki/Euclidean_Rhythm)
 -- https://gist.github.com/vrld/b1e6f4cce7a8d15e00e4
-function rythm(k, n)
+local function rythm(k, n)
     local r = {}
     for i = 1, n do
         r[i] = { i <= k }
