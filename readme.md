@@ -25,15 +25,23 @@ Or run the following command:
 cp -v euclidean_sequencer.lua ~/.config/ardour8/scripts/
 ```
 
+## History
+
+### 0.2
+- Add step duration
+- Rename *Note Duration* to *Note Gate*
+- Fix issue with negative notes at the beginning
+
+### 0.1
+- First verson
+
 ---
 ## Todo
 
 1.0
-- tempo multiplier
+- ~~tempo multiplier~~
 - presets
-- handle more than 4/4 ?
 - test tempo slides
 
-
-- multiple sequences
-- sequence operators
+- multiple sequences?
+- sequence operators?
