@@ -251,8 +251,8 @@ function dsp_run(_, _, n_samples)
                     local note_duration = math.floor(duration * spb / 4)
                     current_note_stop = ts + time + note_duration
                     if debug then
-                        print(string.format("*** noteon  %s - start: %d - stop: %d - duration: %d", bbt:str(), ts + time,
-                            current_note_stop, note_duration))
+                        print(string.format("*** noteon  %s - start: %d - stop: %d - duration: %d",
+                            bbt:str(), ts + time, current_note_stop, note_duration))
                     end
                 end
                 previous_note_index = current_note_index
@@ -261,7 +261,8 @@ function dsp_run(_, _, n_samples)
             if current_note_stop > 0 and (ts + time) >= current_note_stop then
                 -- note off
                 if debug then
-                    print(string.format("*** noteoff %s - stop: %d - stop: %d", bbt:str(), ts + time, current_note_stop))
+                    print(string.format("*** noteoff %s - stop: %d - stop: %d",
+                        bbt:str(), ts + time, current_note_stop))
                 end
                 local midinote = self:shmem():atomic_get_int(2)
                 if midinote > 0 then
@@ -298,11 +299,10 @@ end
 function render_inline(ctx, w, _max_h) -- inline display
     local h = w
 
-    local events, steps, offset, step_duration = read_params()
+    local events, steps, offset, _ = read_params()
     local sequence = rythm(events, steps)
     local pos = self:shmem():atomic_get_int(0)
     local rolling = self:shmem():atomic_get_int(1)
-    rolling = 1
 
     -- draw background
     ctx:rectangle(0, 0, w, h)
