@@ -4,13 +4,13 @@ ardour({
     category = "Effect",
     author = "Gautier Portet",
     license = "MIT",
-    description = [[euclidean_sequencer v0.1
+    description = [[euclidean_sequencer v0.2
 
 Simple euclidean sequencer.
 ]],
 })
 
--- Copyright (c) 2024 Gautier Portet, MIT License
+-- Copyright (c) Gautier Portet, MIT License
 -- Implementing https://en.wikipedia.org/wiki/Euclidean_rhythm
 --
 local debug = false
@@ -36,7 +36,7 @@ function dsp_params()
         },
         {
             type = "input",
-            name = "Length",
+            name = "Steps",
             min = 1,
             max = 24,
             default = 16,
@@ -54,12 +54,11 @@ function dsp_params()
         },
         {
             type = "input",
-            name = "Note Duration",
+            name = "Note Gate",
             min = 0,
             max = 4,
             default = 1,
-            -- integer = true,
-            doc = "note duration",
+            doc = "note duration as a fraction of a step",
             scalepoints = {
                 ["1/4"] = 4,
                 ["1/8"] = 2,
@@ -109,18 +108,36 @@ function dsp_params()
             integer = true,
             doc = "note velocity",
         },
+        {
+            type = "input",
+            name = "Step Duration",
+            min = 1,
+            max = 64,
+            default = 16,
+            integer = true,
+            doc = "step duration as fraction of a beat",
+            scalepoints = {
+                ["1/1"] = 1,
+                ["1/2"] = 2,
+                ["1/4"] = 4,
+                ["1/8"] = 8,
+                ["1/16"] = 16,
+                ["1/32"] = 32,
+                ["1/64"] = 64,
+            },
+        },
     }
 end
 
 local spb = 0          -- samples per beat
 local current_step = 0 -- step counter
 local previous_params = {}
-local previous_note_index = 0
-local current_note_stop = 0
+local previous_note_index = -1
+local current_note_stop = -1
 
 function dsp_init(rate)
     local bpm = 120
-    spb = rate * 60 / bpm
+    spb = rate * 60 / bpm -- XXX
     if spb < 2 then
         spb = 2
     end
@@ -132,13 +149,13 @@ function dsp_init(rate)
     self:shmem():atomic_set_int(1, rolling)
 end
 
--- retuns events, length, offset
+-- retuns events, steps, offset, step_duration
 local function read_params()
     local ctrl = CtrlPorts:array()
-    return math.floor(ctrl[1]), math.floor(ctrl[2]), math.floor(ctrl[3])
+    return math.floor(ctrl[1]), math.floor(ctrl[2]), math.floor(ctrl[3]), math.floor(ctrl[8])
 end
 
--- returns note, octave, volume, duration
+-- returns note, octave, volume, note_duration
 local function read_noteinfo()
     local ctrl = CtrlPorts:array()
     return math.floor(ctrl[5]), math.floor(ctrl[6]), math.floor(ctrl[7]), ctrl[4]
@@ -179,11 +196,11 @@ function dsp_run(_, _, n_samples)
     assert(spb > 1)
 
     local m = 1
-    local events, length, offset = read_params()
+    local events, steps, offset, step_duration = read_params()
     local note, octave, volume, duration = read_noteinfo()
 
     local rolling = Session:transport_state_rolling() and 1 or 0 -- to_int
-    local sequence = rythm(events, length)
+    local sequence = rythm(events, steps)
 
     local subdiv = 1
     local denom = time.ts_denominator * subdiv
@@ -209,51 +226,57 @@ function dsp_run(_, _, n_samples)
         m = m + 1
     end
 
-    for time = 0, n_samples - 1 do
-        local current_note_index = math.floor(((ts + time) / spb) * 4)
-        current_note_index = math.max(0, current_note_index)
+    if rolling > 0 then
+        for time = 0, n_samples - 1 do
+            local current_note_index = math.floor(((ts + time) / spb) * step_duration / 4)
+            current_note_index = math.max(0, current_note_index)
 
-        if current_note_index ~= previous_note_index then
-            current_step = current_note_index % length
-            local active_step = sequence[(current_step + offset) % #sequence]
+            if current_note_index ~= previous_note_index then
+                current_step = current_note_index % steps
+                local active_step = sequence[1 + (current_step + offset) % #sequence]
 
-            if rolling > 0 and active_step then
-                -- note on
-                local midinote = note - 1 + (octave + 1) * 12
-                midiout[m] = {}
-                midiout[m]["time"] = time
-                midiout[m]["data"] = { 0x90, midinote, volume }
-                m = m + 1
-                self:shmem():atomic_set_int(2, midinote)
-                -- send note off after duration
-                local note_duration = math.floor(duration * spb / 4)
-                current_note_stop = ts + time + note_duration
-                if debug then
-                    print(string.format("*** noteon  %s - start: %d - stop: %d - duration: %d", bbt:str(), ts + time,
-                        current_note_stop, note_duration))
+                if active_step then
+                    -- note on
+                    local midinote = note - 1 + (octave + 1) * 12
+                    midiout[m] = {}
+                    if ts + time < 0 then
+                        time = -(ts + time)
+                    end
+
+                    midiout[m]["time"] = time
+                    midiout[m]["data"] = { 0x90, midinote, volume }
+                    m = m + 1
+                    self:shmem():atomic_set_int(2, midinote)
+                    -- send note off after duration
+                    local note_duration = math.floor(duration * spb / 4)
+                    current_note_stop = ts + time + note_duration
+                    if debug then
+                        print(string.format("*** noteon  %s - start: %d - stop: %d - duration: %d", bbt:str(), ts + time,
+                            current_note_stop, note_duration))
+                    end
                 end
+                previous_note_index = current_note_index
             end
-            previous_note_index = current_note_index
-        end
 
-        if current_note_stop > 0 and (ts + time) >= current_note_stop then
-            -- note off
-            if debug then
-                print(string.format("*** noteoff %s - stop: %d - stop: %d", bbt:str(), ts + time, current_note_stop))
+            if current_note_stop > 0 and (ts + time) >= current_note_stop then
+                -- note off
+                if debug then
+                    print(string.format("*** noteoff %s - stop: %d - stop: %d", bbt:str(), ts + time, current_note_stop))
+                end
+                local midinote = self:shmem():atomic_get_int(2)
+                if midinote > 0 then
+                    self:shmem():atomic_set_int(2, 0)
+                    midiout[m] = {}
+                    midiout[m]["time"] = time
+                    midiout[m]["data"] = { 0x80, midinote, 0 }
+                    m = m + 1
+                end
+                current_note_stop = 0
             end
-            local midinote = self:shmem():atomic_get_int(2)
-            if midinote > 0 then
-                self:shmem():atomic_set_int(2, 0)
-                midiout[m] = {}
-                midiout[m]["time"] = time
-                midiout[m]["data"] = { 0x80, midinote, 0 }
-                m = m + 1
-            end
-            current_note_stop = 0
         end
     end
     -- update ui ?
-    local params = { events, length, offset, current_step, rolling }
+    local params = { events, steps, offset, current_step, rolling }
     if table.concat(params) ~= table.concat(previous_params) then
         -- Share current step and rolling state with inline UI
         self:shmem():atomic_set_int(0, current_step)
@@ -262,11 +285,11 @@ function dsp_run(_, _, n_samples)
         self:queue_draw()
 
         if debug then
-            print(string.format("%s- %d - %g [%d] - %d/%d - %g bpm", bbt:str(),
+            print(string.format("%s- %d - %g [%d] - %d/%d - %g bpm - rolling: %s", bbt:str(),
                 current_step,
                 math.floor(denom * bt) / denom, ts - 1,
                 meter:divisions_per_bar(), meter:note_value(),
-                tempo:quarter_notes_per_minute()))
+                tempo:quarter_notes_per_minute(), rolling))
         end
     end
     previous_params = params
@@ -275,10 +298,11 @@ end
 function render_inline(ctx, w, _max_h) -- inline display
     local h = w
 
-    local events, length, offset = read_params()
-    local sequence = rythm(events, length)
+    local events, steps, offset, step_duration = read_params()
+    local sequence = rythm(events, steps)
     local pos = self:shmem():atomic_get_int(0)
     local rolling = self:shmem():atomic_get_int(1)
+    rolling = 1
 
     -- draw background
     ctx:rectangle(0, 0, w, h)
@@ -293,9 +317,9 @@ function render_inline(ctx, w, _max_h) -- inline display
     local cx = w / 2
     local cy = h / 2
 
-    for i = 0, length - 1 do
-        local x = cx + r * math.cos(2 * math.pi * (i / length) - 0.5 * math.pi)
-        local y = cy + r * math.sin(2 * math.pi * (i / length) - 0.5 * math.pi)
+    for i = 0, steps - 1 do
+        local x = cx + r * math.cos(2 * math.pi * (i / steps) - 0.5 * math.pi)
+        local y = cy + r * math.sin(2 * math.pi * (i / steps) - 0.5 * math.pi)
         ctx:arc(x, y, c, 0, 2 * math.pi)
         local active = sequence[(i + 1 + offset) % #sequence]
         if active then
