@@ -129,6 +129,34 @@ function dsp_params()
     }
 end
 
+function presets()
+    return
+    {
+        { name = "Cuban Drum",         params = { Events = 2, Steps = 3 } },
+        { name = "Cumbia",             params = { Events = 3, Steps = 4 } },
+        { name = "Khafif-e-ramal",     params = { Events = 2, Steps = 5 } },
+        { name = "Bulgarian Folk",     params = { Events = 3, Steps = 7 } },
+        { name = "Ruchenitza",         params = { Events = 4, Steps = 7 } },
+        { name = "York-Samai",         params = { Events = 5, Steps = 6 } },
+        { name = "Nawakhat",           params = { Events = 5, Steps = 7 } },
+        { name = "Cuban tresillo",     params = { Events = 3, Steps = 8 } },
+        { name = "Cuban cinquillo",    params = { Events = 5, Steps = 8 } },
+        { name = "Tuareg",             params = { Events = 7, Steps = 8 } },
+        { name = "Aksak",              params = { Events = 4, Steps = 9 } },
+        { name = "Agsag-Samai",        params = { Events = 5, Steps = 9 } },
+        { name = "Outside Now",        params = { Events = 4, Steps = 11 } },
+        { name = "Fandango",           params = { Events = 4, Steps = 12 } },
+        { name = "Venda",              params = { Events = 5, Steps = 12 } },
+        { name = "Mpre",               params = { Events = 7, Steps = 12 } },
+        { name = "Four on the floor",  params = { Events = 4, Steps = 16 } },
+        { name = "Brazilian Necklace", params = { Events = 5, Steps = 16 } },
+        { name = "Samba",              params = { Events = 7, Steps = 16 } },
+        { name = "Ngbaka-Maibo",       params = { Events = 9, Steps = 16 } },
+        { name = "Aka 1",              params = { Events = 11, Steps = 24 } },
+        { name = "Aka 2",              params = { Events = 13, Steps = 24 } },
+    }
+end
+
 local spb = 0          -- samples per beat
 local current_step = 0 -- step counter
 local previous_params = {}
