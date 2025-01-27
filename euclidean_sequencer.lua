@@ -190,31 +190,45 @@ local function read_noteinfo()
 end
 
 -- Euclidean rythm (http://en.wikipedia.org/wiki/Euclidean_Rhythm)
--- https://gist.github.com/vrld/b1e6f4cce7a8d15e00e4
-local function rythm(k, n)
-    local r = {}
+-- https://rosettacode.org/wiki/Euclidean_rhythm#Lua
+local function euclidean_rhythm(k, n)
+    local s = {}
     for i = 1, n do
-        r[i] = { i <= k }
-    end
-
-    local function cat(i, j)
-        for _, v in ipairs(r[j]) do
-            r[i][#r[i] + 1] = v
-        end
-        r[j] = nil
-    end
-
-    while #r > k do
-        for i = 1, math.min(k, #r - k) do
-            cat(i, #r)
+        if i <= k then
+            table.insert(s, { true })
+        else
+            table.insert(s, { false })
         end
     end
 
-    while #r > 1 do
-        cat(#r - 1, #r)
+    local d = n - k
+    n = math.max(k, d)
+    k = math.min(k, d)
+    local z = d
+
+    while z > 0 or k > 1 do
+        for i = 1, k do
+            for _, v in ipairs(s[#s - i + 1]) do
+                table.insert(s[i], v)
+            end
+        end
+        for i = 1, k do
+            table.remove(s)
+        end
+        z = z - k
+        d = n - k
+        n = math.max(k, d)
+        k = math.min(k, d)
     end
 
-    return r[1]
+    local result = {}
+    for _, sublist in ipairs(s) do
+        for _, item in ipairs(sublist) do
+            table.insert(result, item)
+        end
+    end
+
+    return result
 end
 
 function dsp_run(_, _, n_samples)
