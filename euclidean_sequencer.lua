@@ -212,7 +212,7 @@ local function euclidean_rhythm(k, n)
                 table.insert(s[i], v)
             end
         end
-        for i = 1, k do
+        for _ = 1, k do
             table.remove(s)
         end
         z = z - k
@@ -242,7 +242,7 @@ function dsp_run(_, _, n_samples)
     local note, octave, volume, duration = read_noteinfo()
 
     local rolling = Session:transport_state_rolling() and 1 or 0 -- to_int
-    local sequence = rythm(events, steps)
+    local sequence = euclidean_rhythm(events, steps)
 
     local subdiv = 1
     local denom = time.ts_denominator * subdiv
@@ -342,7 +342,7 @@ function render_inline(ctx, w, _max_h) -- inline display
     local h = w
 
     local events, steps, offset, _ = read_params()
-    local sequence = rythm(events, steps)
+    local sequence = euclidean_rhythm(events, steps)
     local pos = self:shmem():atomic_get_int(0)
     local rolling = self:shmem():atomic_get_int(1)
 
