@@ -130,6 +130,7 @@ function dsp_params()
 end
 
 function presets()
+    -- from http://cgm.cs.mcgill.ca/~godfried/publications/banff.pdf
     return
     {
         { name = "Cuban Drum - E(2,3)",         params = { Events = 2, Steps = 3 , Offset = 0 } },
